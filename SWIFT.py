@@ -187,7 +187,7 @@ async def handle_user_message(update: Update, context: CallbackContext):
     elif user_message == "Fikr-mulohaza qoldirish":
         user_states[user_id] = STATE_FEEDBACK
         await update.message.reply_text(
-            "Iltimos, fikr-mulohazangizni yozib qoldiring.",
+            "Bank xizmatlari to'g'risida o'z fikr-mulohazalaringizni qoldiring. Xizmatlarimiz Siz uchun yanada qulay, tez va sodda bo'lishida o'z hissangizni qo'shing",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
 
