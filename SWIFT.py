@@ -7,7 +7,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
-    CallbackContext,
+    CallbackContext, ContextTypes,
 )
 
 # Replace with your Telegram bot API token
@@ -91,10 +91,14 @@ STATE_PROBLEM = "problem"
 STATE_FEEDBACK = "feedback"
 
 expert_to_user = {}
-async def handle_user_message(update: Update, context: CallbackContext):
-    user_message = update.message.text
+async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_message = update.message.text
+    except AttributeError:
+        logging.warning("Error: Message is not a text message")
+        return
     user_id = update.message.chat_id
-
+    logging.warning('Handled')
     if user_message == "Qo'llanmalar":
         await update.message.reply_text(
             "Bu bo'limda Siz tashqi iqtisodiy foaliyatingiz doirasida bank tomonidan ko'rsatiladigan xizmatlardan foydalanish bo'yicha qo'llanmalar bilan tanishib chiqishingiz mumkin",
@@ -177,7 +181,7 @@ async def handle_user_message(update: Update, context: CallbackContext):
             "Operator bilan bog'lanish uchun +998123456789 raqamiga qo'ng'iroq qiling yoki onlayn chatga yozing.",
             reply_markup=ReplyKeyboardMarkup([
                 [KeyboardButton("Orqaga")],
-                [KeyboardButton("Bosh sahifa")]
+                #[KeyboardButton("Bosh sahifa")]
             ], resize_keyboard=True)
         )
         return
@@ -388,7 +392,8 @@ def main():
     # Add handlers for commands and messages
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("getid", get_group_id))  # Add the handler here
-    application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handle_user_message))
+    # application.add_handler(MessageHandler(filters.TEXT &  filters.ChatType.PRIVATE, handle_user_message))
+    application.add_handler(MessageHandler(filters.ALL   &  filters.ChatType.PRIVATE, handle_user_message))
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUP, handle_expert_reply))
 
 
