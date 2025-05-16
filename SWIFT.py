@@ -11,7 +11,7 @@ from telegram.ext import (
 )
 
 # Replace with your Telegram bot API token
-BOT_API_TOKEN = "7873292564:AAE-iennxxgq5vXYUl-WruZF5HJ7KPAn4FY"  # Replace with your bot's API token
+BOT_API_TOKEN = ""  # Replace with your bot's API token
 
 # Replace with the group chat ID where experts will see customer queries
 EXPERT_GROUP_CHAT_ID = -4806778713  # Replace with your group chat ID
