@@ -11,10 +11,10 @@ from telegram.ext import (
 )
 
 # Replace with your Telegram bot API token
-BOT_API_TOKEN = ""  # Replace with your bot's API token
+BOT_API_TOKEN = "7873292564:AAE-iennxxgq5vXYUl-WruZF5HJ7KPAn4FY"  # Replace with your bot's API token
 
 # Replace with the group chat ID where experts will see customer queries
-EXPERT_GROUP_CHAT_ID = -4891331238  # Replace with your group chat ID
+EXPERT_GROUP_CHAT_ID = -4806778713  # Replace with your group chat ID
 
 # Configure logging
 logging.basicConfig(
@@ -158,6 +158,9 @@ async def handle_user_message(update: Update, context: CallbackContext):
         )
         return
 
+
+
+
     elif user_message == "1. Chat":
         user_states[user_id] = STATE_PROBLEM
         await update.message.reply_text(
@@ -165,6 +168,9 @@ async def handle_user_message(update: Update, context: CallbackContext):
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
+
+
+
 
     elif user_message == "2. Aloqaga chiqish":
         await update.message.reply_text(
@@ -191,28 +197,84 @@ async def handle_user_message(update: Update, context: CallbackContext):
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
 
+
+
     elif user_states.get(user_id) == STATE_PROBLEM:
         try:
-            # Forward the user's problem to the expert group
-            forwarded_message = await context.bot.send_message(
-                chat_id=EXPERT_GROUP_CHAT_ID,
-                text=f"📢 Yangi muammo (User {user_id}): {user_message}",
-            )
-
+            if update.message.text:
+            # Forward the user's text problem to the expert group
+                forwarded_message = await context.bot.send_message(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    text=f"📢 Yangi muammo (User {user_id}): {update.message.text}",
+                )
             # Update the mapping of forwarded message to the original user
-            expert_to_user[forwarded_message.message_id] = user_id
+                expert_to_user[forwarded_message.message_id] = user_id
+                await update.message.reply_text(
+                    "Muammo mutaxassislarga yuborildi. Tez orada javob beramiz.",
+                    reply_markup=main_menu_keyboard(),
+                )
 
-            await update.message.reply_text(
-                "Muammo mutaxassislarga yuborildi. Tez orada javob beramiz.",
-                reply_markup=main_menu_keyboard(),
-            )
+            elif update.message.photo:
+                # Forward the user's photo problem to the expert group
+                photo = update.message.photo[-1]  # Get the highest resolution photo
+                forwarded_message = await context.bot.send_photo(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    photo=photo.file_id,
+                    caption=f"📢 Yangi surat (User {user_id}):",
+                )
+            # Update the mapping
+                expert_to_user[forwarded_message.message_id] = user_id
+                await update.message.reply_text(
+                    "Surat mutaxassislarga yuborildi. Tez orada javob beramiz.",
+                    reply_markup=main_menu_keyboard(),
+                )
+
+            elif update.message.video:
+                # Forward the user's video problem to the expert group
+                video = update.message.video
+                forwarded_message = await context.bot.send_video(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    video=video.file_id,
+                    caption=f"📢 Yangi video (User {user_id}):",
+                )
+            # Update the mapping
+                expert_to_user[forwarded_message.message_id] = user_id
+                await update.message.reply_text(
+                    "Video mutaxassislarga yuborildi. Tez orada javob beramiz.",
+                    reply_markup=main_menu_keyboard(),
+                )
+
+            elif update.message.document:
+                # Forward the user's document to the expert group
+                document = update.message.document
+                forwarded_message = await context.bot.send_document(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    document=document.file_id,
+                    caption=f"📢 Yangi hujjat (User {user_id}):",
+                )
+            # Update the mapping
+                expert_to_user[forwarded_message.message_id] = user_id
+                await update.message.reply_text(
+                    "Hujjat mutaxassislarga yuborildi. Tez orada javob beramiz.",
+                    reply_markup=main_menu_keyboard(),
+                )
+
+            else:
+                # Handle unsupported message types
+                await update.message.reply_text(
+                    "Kechirasiz, ushbu turdagi fayllar qabul qilinmaydi.",
+                    reply_markup=main_menu_keyboard(),
+                )
+
         except Exception as e:
-            logger.error(f"Error forwarding problem to experts: {e}")
+            logger.error(f"Error forwarding message to experts: {e}")
             await update.message.reply_text(
-                "Kechirasiz, muammoni yuborishda xatolik yuz berdi.",
+                "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
                 reply_markup=main_menu_keyboard(),
             )
-        user_states[user_id] = STATE_NONE
+
+
+        #user_states[user_id] = STATE_NONE
 
     elif user_states.get(user_id) == STATE_FEEDBACK:
         save_feedback(user_id, user_message)
@@ -226,6 +288,8 @@ async def handle_user_message(update: Update, context: CallbackContext):
         await update.message.reply_text(
             "Kechirasiz, so'rovingizni tushunmadim.", reply_markup=main_menu_keyboard()
         )
+
+
 
 # Handle expert replies
 async def handle_expert_reply(update: Update, context: CallbackContext):
@@ -248,6 +312,43 @@ async def handle_expert_reply(update: Update, context: CallbackContext):
                 logger.warning("No user mapping found for expert reply.")
         else:
             logger.warning("Expert reply is not a reply to a forwarded message.")
+
+
+
+
+async def forward_media_to_experts(user_id, file_id, media_type, update, context):
+    try:
+        if media_type == "photo":
+            await context.bot.send_photo(
+                chat_id=EXPERT_GROUP_CHAT_ID,
+                photo=file_id,
+                caption=f"📢 Yangi surat (User {user_id}):",
+            )
+        elif media_type == "video":
+            await context.bot.send_video(
+                chat_id=EXPERT_GROUP_CHAT_ID,
+                video=file_id,
+                caption=f"📢 Yangi video (User {user_id}):",
+            )
+        elif media_type == "document":
+            await context.bot.send_document(
+                chat_id=EXPERT_GROUP_CHAT_ID,
+                document=file_id,
+                caption=f"📢 Yangi hujjat (User {user_id}):",
+            )
+        else:
+            await update.message.reply_text(
+                "Kechirasiz, ushbu turdagi fayllarni jo'nata olmaymiz."
+            )
+        # Confirm to the user
+        await update.message.reply_text("Fayl mutaxassislarga yuborildi.", reply_markup=main_menu_keyboard())
+    except Exception as e:
+        logger.error(f"Error forwarding {media_type} to experts: {e}")
+        await update.message.reply_text(
+            "Kechirasiz, faylni yuborishda xatolik yuz berdi.", reply_markup=main_menu_keyboard()
+        )
+
+
 
 
 # Add this function to get the group chat ID
