@@ -11,6 +11,8 @@ from telegram.ext import (
     CallbackContext, ContextTypes,
 )
 
+from pythonProject.get_feedback import muroajaat_id
+
 # Replace with your Telegram bot API token
 Your_bot_token_id = ''  # Replace with your bot's API token
 
@@ -48,22 +50,39 @@ def initialize_database():
 
 
 
-# def initialize_database2():
-#     connection = sqlite3.connect("messages.db")
-#     cursor = connection.cursor()
-#     cursor.execute("""
-#                    CREATE TABLE IF NOT EXISTS messages (
-#                                                            muroajaat_id INTEGER PRIMARY KEY AUTOINCREMENT,
-#                                                            username TEXT,
-#                                                            user_id INTEGER NOT NULL,
-#                                                            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-#                                                            media_type TEXT,
-#                                                            media_id TEXT,
-#                                                            text_content TEXT
-#                    )
-#                    """)
-#     connection.commit()
-#     connection.close()
+def initialize_database2():
+    connection = sqlite3.connect("messages.db")
+    cursor = connection.cursor()
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS messages (
+                                                           muroajaat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                           username TEXT,
+                                                           user_id INTEGER NOT NULL,
+                                                           date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                                           media_type TEXT,
+                                                           media_id TEXT,
+                                                           text_content TEXT
+                   )
+                   """)
+    connection.commit()
+    connection.close()
+
+initialize_database2()
+
+def save_message_to_db(username, user_id, media_type, media_id=None, text_content=None):
+    try:
+        connection = sqlite3.connect("messages.db")
+        cursor = connection.cursor()
+        cursor.execute("""
+                       INSERT INTO messages (username, user_id, media_type, media_id, text_content)
+                       VALUES (?, ?, ?, ?, ?)
+                       """, (username, user_id, media_type, media_id, text_content))
+        connection.commit()
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+    finally:
+        connection.close()
+
 
 
 # Save feedback to the database
@@ -552,80 +571,66 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     elif user_states.get(user_id) == STATE_AUTH_DONE:
         try:
+            username = update.message.from_user.username or "No Username"
+            timestamp = update.message.date  # Timestamp of the message
+
             if update.message.text:
-            # Forward the user's text problem to the expert group
                 forwarded_message = await context.bot.send_message(
                     chat_id=EXPERT_GROUP_CHAT_ID,
-                    text=f"📢 Yangi muammo (User {user_id}): {update.message.text}",
+                    text=f"📢 Yangi muammo (User {user_id}, Murojaat ID: {muroajaat_id}): {update.message.text}",
                 )
-            # Update the mapping of forwarded message to the original user
+                # Save to database and map
+                save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
                 expert_to_user[forwarded_message.message_id] = user_id
-                await update.message.reply_text(
-                    "Muammo mutaxassislarga yuborildi. Tez orada javob beramiz.",
-                    reply_markup=main_menu_keyboard(),
-                )
 
             elif update.message.photo:
-                # Forward the user's photo problem to the expert group
-                photo = update.message.photo[-1]  # Get the highest resolution photo
+                photo = update.message.photo[-1]
                 forwarded_message = await context.bot.send_photo(
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     photo=photo.file_id,
-                    caption=f"📢 Yangi surat (User {user_id}):",
+                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
                 )
-            # Update the mapping
+                save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
-                await update.message.reply_text(
-                    "Surat mutaxassislarga yuborildi. Tez orada javob beramiz.",
-                    reply_markup=main_menu_keyboard(),
-                )
 
             elif update.message.video:
-                # Forward the user's video problem to the expert group
                 video = update.message.video
                 forwarded_message = await context.bot.send_video(
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     video=video.file_id,
-                    caption=f"📢 Yangi video (User {user_id}):",
+                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
                 )
-            # Update the mapping
+                save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
-                await update.message.reply_text(
-                    "Video mutaxassislarga yuborildi. Tez orada javob beramiz.",
-                    reply_markup=main_menu_keyboard(),
-                )
 
             elif update.message.document:
-                # Forward the user's document to the expert group
                 document = update.message.document
                 forwarded_message = await context.bot.send_document(
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     document=document.file_id,
-                    caption=f"📢 Yangi hujjat (User {user_id}):",
+                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
                 )
-            # Update the mapping
+                save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
-                await update.message.reply_text(
-                    "Hujjat mutaxassislarga yuborildi. Tez orada javob beramiz.",
-                    reply_markup=main_menu_keyboard(),
-                )
 
             else:
-                # Handle unsupported message types
                 await update.message.reply_text(
                     "Kechirasiz, ushbu turdagi fayllar qabul qilinmaydi.",
                     reply_markup=main_menu_keyboard(),
                 )
-
+            await update.message.reply_text(
+                "Xabar mutaxassislarga yuborildi. Tez orada javob olasiz.",
+                reply_markup=main_menu_keyboard(),
+            )
         except Exception as e:
             logger.error(f"Error forwarding message to experts: {e}")
             await update.message.reply_text(
-                "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
+                # "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
                 reply_markup=main_menu_keyboard(),
             )
 
 
-        #user_states[user_id] = STATE_NONE
+            #user_states[user_id] = STATE_NONE
 
     elif user_states.get(user_id) == STATE_FEEDBACK:
         save_feedback(user_id, user_message)
@@ -698,18 +703,15 @@ async def handle_orqaga(update: Update, context: CallbackContext):
 
 # Handle expert replies
 async def handle_expert_reply(update: Update, context: CallbackContext):
-    # Ensure it's coming from the expert group
     if update.message.chat_id == EXPERT_GROUP_CHAT_ID:
         replied_message = update.message.reply_to_message
         if replied_message:
-            # Fetch the original user ID using the mapping
             original_user_id = expert_to_user.get(replied_message.message_id)
             if original_user_id:
                 try:
-                    # Forward the expert's reply to the original user
                     await context.bot.send_message(
                         chat_id=original_user_id,
-                        text=f"Mutaxassisdan javob: {update.message.text}"
+                        text=f"Mutaxassisdan javob: {update.message.text}",
                     )
                 except Exception as e:
                     logger.error(f"Error forwarding expert reply to user: {e}")
@@ -717,8 +719,6 @@ async def handle_expert_reply(update: Update, context: CallbackContext):
                 logger.warning("No user mapping found for expert reply.")
         else:
             logger.warning("Expert reply is not a reply to a forwarded message.")
-
-
 
 
 async def forward_media_to_experts(user_id, file_id, media_type, update, context):
