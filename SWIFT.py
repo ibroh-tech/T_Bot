@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import logging
+from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application,
@@ -11,7 +12,7 @@ from telegram.ext import (
 )
 
 # Replace with your Telegram bot API token
-BOT_API_TOKEN = ""  # Replace with your bot's API token
+Your_bot_token_id = '7873292564:AAE-iennxxgq5vXYUl-WruZF5HJ7KPAn4FY'  # Replace with your bot's API token
 
 # Replace with the group chat ID where experts will see customer queries
 EXPERT_GROUP_CHAT_ID = -4806778713  # Replace with your group chat ID
@@ -46,6 +47,23 @@ def initialize_database():
     connection.close()
 
 
+
+# def initialize_database2():
+#     connection = sqlite3.connect("messages.db")
+#     cursor = connection.cursor()
+#     cursor.execute("""
+#                    CREATE TABLE IF NOT EXISTS messages (
+#                                                            muroajaat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+#                                                            username TEXT,
+#                                                            user_id INTEGER NOT NULL,
+#                                                            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#                                                            media_type TEXT,
+#                                                            media_id TEXT,
+#                                                            text_content TEXT
+#                    )
+#                    """)
+#     connection.commit()
+#     connection.close()
 
 
 # Save feedback to the database
@@ -83,7 +101,28 @@ async def start(update: Update, context: CallbackContext):
 
 
 # Handle user messages
-user_states = {}  # A dictionary to manage states for all users
+STATE_AUTH_TOLOV_Q1 = "auth_q1"
+STATE_AUTH_TOLOV_Q2 = "auth_q2"
+STATE_AUTH_TOLOV_Q3 = "auth_q3"
+STATE_AUTH_TOLOV_Q4 = "auth_q4"
+STATE_AUTH_TOLOV_Q5 = "auth_q5"
+STATE_AUTH_DONE = "auth_done"
+STATE_AUTH_FACTOR_Q1 = "auth_f_q1"
+STATE_AUTH_FACTOR_Q2 = "auth_f_q2"
+STATE_AUTH_FACTOR_Q3 = "auth_f_q3"
+STATE_AUTH_FACTOR_Q4 = "auth_f_q4"
+STATE_AUTH_FACTOR_Q5 = "auth_f_q5"
+STATE_AUTH_KONVERT_Q1 = "auth_k_q1"
+STATE_AUTH_KONVERT_Q2 = "auth_k_q2"
+STATE_AUTH_KONVERT_Q3 = "auth_k_q3"
+STATE_AUTH_KONVERT_Q4 = "auth_k_q4"
+STATE_AUTH_KONVERT_Q5 = "auth_k_q5"
+
+
+user_states = {}
+user_answers = {}
+user_history = {}   # Dictionary to track user navigation history
+                    # A dictionary to manage states for all users
 
 # Define user states
 STATE_NONE = "none"
@@ -91,6 +130,18 @@ STATE_PROBLEM = "problem"
 STATE_FEEDBACK = "feedback"
 
 expert_to_user = {}
+
+def push_to_history(user_id, state):
+    if user_id not in user_history:
+        user_history[user_id] = []
+    user_history[user_id].append(state)
+
+def pop_from_history(user_id):
+    if user_id in user_history and user_history[user_id]:
+        return user_history[user_id].pop()
+    return None  # Default to None if history is empty
+
+
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_message = update.message.text
@@ -100,6 +151,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.message.chat_id
     logging.warning('Handled')
     if user_message == "Qo'llanmalar":
+        push_to_history(user_id, "Qo'llanmalar")
         await update.message.reply_text(
             "Bu bo'limda Siz tashqi iqtisodiy foaliyatingiz doirasida bank tomonidan ko'rsatiladigan xizmatlardan foydalanish bo'yicha qo'llanmalar bilan tanishib chiqishingiz mumkin",
             reply_markup=ReplyKeyboardMarkup([
@@ -110,14 +162,15 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             ], resize_keyboard=True)
         )
         return
+
     elif user_message == "1. Internet banking tizimida SWIFT to'lovlari":
-        file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\example.docx"
+        file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\Swift to'lovlari.pdf"
         try:
             with open(file_path, "rb") as file:
                 await context.bot.send_document(chat_id=user_id, document=file)
             await update.message.reply_text(
                 "Hujjat muvaffaqiyatli yuborildi!",
-                reply_markup=ReplyKeyboardMarkup([["Orqaga"], ["Bosh sahifa"]], resize_keyboard=True),
+                reply_markup=ReplyKeyboardMarkup([["Orqaga"]], resize_keyboard=True)
             )
             return
         except FileNotFoundError:
@@ -129,32 +182,80 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     elif user_message == "2. Konvertatsiya amaliyoti":
         await update.message.reply_text(
-            "Kredit olish uchun ariza to'ldiring va kerakli hujjatlarni taqdim eting.",
-            reply_markup=ReplyKeyboardMarkup([["Orqaga"], ["Bosh sahifa"]], resize_keyboard=True)
+            "Hujjat muvaffaqiyatli yuborildi!",
+            reply_markup=ReplyKeyboardMarkup([
+                [KeyboardButton("Orqaga")],
+            ], resize_keyboard=True),
         )
-        file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\example2.docx"
+        file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\Konvertatsiya amaliyoti.pdf"  # Replace with the correct file path
         with open(file_path, "rb") as file:
             await context.bot.send_document(chat_id=user_id, document=file)
             return
 
+
     elif user_message == "3. Faktoring amaliyoti":
+        # Ask user to choose a language for the document
         await update.message.reply_text(
-            "To'lov xabarnomasini kiritish va jo'natish shartnomasi uchun qo'llanma.",
-            reply_markup=ReplyKeyboardMarkup([
-                [KeyboardButton("Orqaga")],
-                [KeyboardButton("Bosh sahifa")]
-            ], resize_keyboard=True)
+            "Hujjatni qaysi tilda olishni istaysiz?",
+            reply_markup=ReplyKeyboardMarkup(
+                [
+                    [KeyboardButton("Rus tilida"), KeyboardButton("O'zbek tilida")],
+                    [KeyboardButton("Orqaga")],
+                ],
+                resize_keyboard=True,
+            )
         )
-        file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\example3.docx"  # Replace with the correct file path
-        with open(file_path, "rb") as file:
-            await context.bot.send_document(chat_id=user_id, document=file)
-            return
+        # Update state to wait for language selection
+        user_states[user_id] = "LANGUAGE_SELECTION"
+        return
+
+    elif user_states.get(user_id) == "LANGUAGE_SELECTION":
+        if user_message == "Rus tilida":
+            # Send the document in Russian
+            file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\дебитор_порядок действий v-1.pdf"  # Replace with Russian file path
+            with open(file_path, "rb") as file:
+                await context.bot.send_document(chat_id=user_id, document=file)
+            await update.message.reply_text(
+                "Hujjat rus tilida muvaffaqiyatli yuborildi!",
+                reply_markup=ReplyKeyboardMarkup(
+                    [[KeyboardButton("Orqaga")]],
+                    resize_keyboard=True,
+                )
+            )
+        elif user_message == "O'zbek tilida":
+            # Send the document in Uzbek
+            file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\дебитор_порядок действий Uz.docx"  # Replace with Uzbek file path
+            with open(file_path, "rb") as file:
+                await context.bot.send_document(chat_id=user_id, document=file)
+            await update.message.reply_text(
+                "Hujjat o'zbek tilida muvaffaqiyatli yuborildi!",
+                reply_markup=ReplyKeyboardMarkup(
+                    [[KeyboardButton("Orqaga")]],
+                    resize_keyboard=True,
+                )
+            )
+
+        # else:
+        #     # Handle invalid input
+        #     await update.message.reply_text(
+        #         "Iltimos, tugmalardan birini tanlang.",
+        #         reply_markup=ReplyKeyboardMarkup(
+        #             [
+        #                 [KeyboardButton("Rus tilida"), KeyboardButton("O'zbek tilida")],
+        #                 [KeyboardButton("Orqaga")],
+        #             ],
+        #             resize_keyboard=True,
+        #         )
+        #     )
+        # return
+
 
 
     if user_message == "Bank bilan bog'lanish":
+        push_to_history(user_id, "Bank bilan bog'lanish")
         user_states[user_id] = STATE_PROBLEM
         await update.message.reply_text(
-            "Iltimos, muammo yoki savolingizni yozib qoldiring. Biz uni mutaxassislarga yuboramiz.",
+            "1. Mutahasis bilan bog'lanish uchun Chat tugmasini tanlang.\n 2. Mutahasis kontakt raqamlarini olish uchun Aloqaga chiqish tugmasini tanlang. ",
             reply_markup=ReplyKeyboardMarkup(
                 [[KeyboardButton("1. Chat")],
                  [KeyboardButton("2. Aloqaga chiqish")],
@@ -162,18 +263,270 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
 
-
-
-
-    elif user_message == "1. Chat":
-        user_states[user_id] = STATE_PROBLEM
+    if user_message == "1. Chat":
+        push_to_history(user_id, "1. Chat")
+        # Start authentication flow
+        user_states[user_id] = STATE_AUTH_TOLOV_Q1
         await update.message.reply_text(
-            "Iltimos, muammo yoki savolingizni yozib qoldiring. Biz uni mutaxassislarga yuboramiz.",
+            "Pastdagi tugmalardan birini tanlang",
+            reply_markup=ReplyKeyboardMarkup(
+                [[KeyboardButton("1. To'lov bo'yicha")],
+                 [KeyboardButton("2. Konvertatsiya bo'yicha")],
+                 [KeyboardButton("3. Faktoring bo'yicha")],
+                 [KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+
+    elif user_message == "1. To'lov bo'yicha":
+        # Start the form for "To'lov bo'yicha"
+        push_to_history(user_id, "1. To'lov bo'yicha")
+        user_states[user_id] = STATE_AUTH_TOLOV_Q1
+        await update.message.reply_text(
+            "Iltimos, Mutahasisga bog'lanish uchun oldin o'zingiz haqingizda ma'lumot bering.\nDastlab korxonaning nomini kiriting"
+        )
+        return
+
+    elif user_message == "2. Konvertatsiya bo'yicha":
+        # Start the form for "To'lov bo'yicha"
+        push_to_history(user_id, "2. Konvertatsiya bo'yicha")
+        user_states[user_id] = STATE_AUTH_KONVERT_Q1
+        await update.message.reply_text(
+            "Iltimos, Mutahasisga bog'lanish uchun oldin o'zingiz haqingizda ma'lumot bering.\nDastlab korxonaning nomini kiriting"
+        )
+        return
+
+    elif user_message == "3. Faktoring bo'yicha":
+        # Start the form for "To'lov bo'yicha"
+        push_to_history(user_id, "3. Faktoring bo'yicha")
+        user_states[user_id] = STATE_AUTH_FACTOR_Q1
+        await update.message.reply_text(
+            "Iltimos, Mutahasisga bog'lanish uchun oldin o'zingiz haqingizda ma'lumot bering.\nDastlab korxonaning nomini va STIR raqamini kiriting:"
+        )
+        return
+
+    elif user_message == "Orqaga":
+        await handle_orqaga(update, context)
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q1:
+        # Save answer to first question
+        user_answers[user_id] = {"Korxona nomi": user_message}
+        user_states[user_id] = STATE_AUTH_TOLOV_Q2
+        await update.message.reply_text("Iltimos, Korxonaning manzilini kiriting")
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q2:
+        # Save second answer
+        user_answers[user_id]["Manzil"] = user_message
+        user_states[user_id] = STATE_AUTH_TOLOV_Q3
+        # You can validate answers here if you want
+        await update.message.reply_text(
+            "BANK MFO si ",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q3:
+        # Validate if the message contains only numbers
+        if not user_message.isdigit():
+            await update.message.reply_text(
+                "Iltimos, faqat raqamlarni kiriting.",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+            )
+            return
+
+        # Save valid answer
+        user_answers[user_id]["MFO"] = user_message
+        user_states[user_id] = STATE_AUTH_TOLOV_Q4
+        await update.message.reply_text(
+            "Telefon raqami",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q4:
+        # Validate if the input is a valid phone number (digits only, or allow specific format)
+        if not user_message.isdigit() or len(user_message) < 9 or len(user_message) > 15:
+            await update.message.reply_text(
+                "Iltimos, faqat to'g'ri telefon raqamini kiriting (Masalan 998XXXXXXXXX formatda).",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+            )
+            return
+
+        # Save valid phone number
+        user_answers[user_id]["Telefon raqam"] = user_message
+        user_states[user_id] = STATE_AUTH_TOLOV_Q5
+        await update.message.reply_text(
+            "Murojatchining FIO si",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
 
 
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q5:
+        # Store the last user message in their details
+        user_answers[user_id]["FIO"] = user_message
+
+        # Change the state to indicate the process is done
+        user_states[user_id] = STATE_AUTH_DONE
+
+        # Format the collected details for sending back to the user
+        filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
+
+        # Send a confirmation message along with the filled-out details
+        await update.message.reply_text(
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz to'lov bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"{filled_out_details}\n\n"
+            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q1:
+        # Save answer to first question
+        user_answers[user_id] = {"Korxona nomi": user_message}
+        user_states[user_id] = STATE_AUTH_KONVERT_Q2
+        await update.message.reply_text("Iltimos, Korxonaning manzilini kiriting")
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q2:
+        # Save second answer
+        user_answers[user_id]["Manzil"] = user_message
+        user_states[user_id] = STATE_AUTH_KONVERT_Q3
+        # You can validate answers here if you want
+        await update.message.reply_text(
+            "BANK MFO si ",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q3:
+        # Validate if the message contains only numbers
+        if not user_message.isdigit():
+            await update.message.reply_text(
+                "Iltimos, faqat raqamlarni kiriting.",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+            )
+            return
+
+        # Save valid answer
+        user_answers[user_id]["MFO"] = user_message
+        user_states[user_id] = STATE_AUTH_KONVERT_Q4
+        await update.message.reply_text(
+            "Telefon raqami",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q4:
+        # Validate if the input is a valid phone number (digits only, or allow specific format)
+        if not user_message.isdigit() or len(user_message) < 9 or len(user_message) > 15:
+            await update.message.reply_text(
+                "Iltimos, faqat to'g'ri telefon raqamini kiriting (Masalan 998XXXXXXXXX formatda).",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+            )
+            return
+
+        # Save valid phone number
+        user_answers[user_id]["Telefon raqam"] = user_message
+        user_states[user_id] = STATE_AUTH_KONVERT_Q5
+        await update.message.reply_text(
+            "Murojatchining FIO si",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+
+
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q5:
+        # Store the last user message in their details
+        user_answers[user_id]["FIO"] = user_message
+
+        # Change the state to indicate the process is done
+        user_states[user_id] = STATE_AUTH_DONE
+
+        # Format the collected details for sending back to the user
+        filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
+
+        # Send a confirmation message along with the filled-out details
+        await update.message.reply_text(
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz konvertatsiya bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"{filled_out_details}\n\n"
+            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q1:
+        # Save answer to first question
+        user_answers[user_id] = {"Korxona nomi va STIR raqami": user_message}
+        user_states[user_id] = STATE_AUTH_FACTOR_Q2
+        await update.message.reply_text("Iltimos, Korxonaning rahbarining FIO si kiriting")
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q2:
+        # Save second answer
+        user_answers[user_id]["FIO"] = user_message
+        user_states[user_id] = STATE_AUTH_FACTOR_Q3
+        # You can validate answers here if you want
+        await update.message.reply_text(
+            "Iltimos, telefon raqamingizni kiriting: ",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q3:
+        # Validate if the input is a valid phone number (digits only, or allow specific format)
+        if not user_message.isdigit() or len(user_message) < 9 or len(user_message) > 15:
+            await update.message.reply_text(
+                "Iltimos, faqat to'g'ri telefon raqamini kiriting (Masalan 998XXXXXXXXX formatda).",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+            )
+            return
+
+        # Save valid phone number
+        user_answers[user_id]["Telefon raqam"] = user_message
+        user_states[user_id] = STATE_AUTH_FACTOR_Q4
+        await update.message.reply_text(
+            "Bankning qaysi filiali mijozisiz?",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q4:
+        # Save second answer
+        user_answers[user_id]["Filial"] = user_message
+        user_states[user_id] = STATE_AUTH_FACTOR_Q5
+        # You can validate answers here if you want
+        await update.message.reply_text(
+            "Murojaat maqsadi",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
+
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q5:
+        # Store the last user message in their details
+        user_answers[user_id]["Murojaatning maqsadi"] = user_message
+
+        # Change the state to indicate the process is done
+        user_states[user_id] = STATE_AUTH_DONE
+
+        # Format the collected details for sending back to the user
+        filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
+
+        # Send a confirmation message along with the filled-out details
+        await update.message.reply_text(
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz faktoring bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"{filled_out_details}\n\n"
+            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
+        )
+        return
 
 
     elif user_message == "2. Aloqaga chiqish":
@@ -186,13 +539,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
 
-    elif user_message == "Orqaga":
-        # Reset the state and avoid processing further as a problem
-        user_states[user_id] = STATE_NONE
-        await update.message.reply_text(
-            "Jarayon bekor qilindi.", reply_markup=main_menu_keyboard()
-        )
-        return
+
 
     elif user_message == "Fikr-mulohaza qoldirish":
         user_states[user_id] = STATE_FEEDBACK
@@ -203,7 +550,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 
-    elif user_states.get(user_id) == STATE_PROBLEM:
+    elif user_states.get(user_id) == STATE_AUTH_DONE:
         try:
             if update.message.text:
             # Forward the user's text problem to the expert group
@@ -290,8 +637,62 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     else:
         await update.message.reply_text(
-            "Kechirasiz, so'rovingizni tushunmadim.", reply_markup=main_menu_keyboard()
+            "Kechirasiz, so'rovingizni tushunmadim menyudan tanlang.", reply_markup=main_menu_keyboard()
         )
+
+async def handle_orqaga(update: Update, context: CallbackContext):
+    user_id = update.message.chat_id
+    previous_state = pop_from_history(user_id)
+
+    if previous_state is None:
+        # If history is empty, return to the main menu
+        await update.message.reply_text(
+            "Bosh menyuga qaytdingiz.",
+            reply_markup=main_menu_keyboard()
+        )
+        user_states[user_id] = STATE_NONE
+        return
+
+    # Navigate back based on the previous state
+    if previous_state == "Qo'llanmalar":
+        await update.message.reply_text(
+            "Qo'llanmalar bo'limiga qaytdingiz.",
+            reply_markup=ReplyKeyboardMarkup([
+                [KeyboardButton("1. Internet banking tizimida SWIFT to'lovlari")],
+                [KeyboardButton("2. Konvertatsiya amaliyoti")],
+                [KeyboardButton("3. Faktoring amaliyoti")],
+                [KeyboardButton("Orqaga")]
+            ], resize_keyboard=True)
+        )
+    elif previous_state == "Bank bilan bog'lanish":
+        await update.message.reply_text(
+            "Bank bilan bog'lanish bo'limiga qaytdingiz.",
+            reply_markup=ReplyKeyboardMarkup([
+                [KeyboardButton("1. Chat")],
+                [KeyboardButton("2. Aloqaga chiqish")],
+                [KeyboardButton("Orqaga")]
+            ], resize_keyboard=True)
+        )
+    elif previous_state == "1. Chat":
+        await update.message.reply_text(
+            "Chat bo'limiga qaytdingiz.",
+            reply_markup=ReplyKeyboardMarkup([
+                [KeyboardButton("1. To'lov bo'yicha")],
+                [KeyboardButton("2. Konvertatsiya bo'yicha")],
+                [KeyboardButton("3. Faktoring bo'yicha")],
+                [KeyboardButton("Orqaga")]
+            ], resize_keyboard=True)
+        )
+
+
+    else:
+        # Default fallback for other cases
+        await update.message.reply_text(
+            "Avvalgi bo'limga qaytdingiz.",
+            reply_markup=main_menu_keyboard()
+        )
+
+
 
 
 
@@ -387,7 +788,7 @@ def get_feedbacks():
 
 def main():
     initialize_database()
-    application = Application.builder().token(BOT_API_TOKEN).build()
+    application = Application.builder().token(Your_bot_token_id).build()
 
     # Add handlers for commands and messages
     application.add_handler(CommandHandler("start", start))
@@ -397,10 +798,13 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUP, handle_expert_reply))
 
 
+
+    # Adding handler for text messages
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
+
+
     logger.info("Bot is starting...")
     application.run_polling()
 
 if __name__ == "__main__":
     main()
-
-
