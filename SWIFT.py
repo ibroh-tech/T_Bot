@@ -11,7 +11,37 @@ from telegram.ext import (
     CallbackContext, ContextTypes,
 )
 
-from pythonProject.get_feedback import muroajaat_id
+import sqlite3
+
+def get_all_messages():
+    try:
+        connection = sqlite3.connect("messages.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM messages")
+        messages = cursor.fetchall()
+        connection.close()
+        return messages
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return []
+
+
+messages = get_all_messages()
+
+if messages:
+    print("All Messages:")
+    for message in messages:
+        muroajaat_id, username, user_id, date, media_type, media_id, text_content = message
+        print(f"ID: {muroajaat_id}")
+        print(f"Username: {username}")
+        print(f"User ID: {user_id}")
+        print(f"Date: {date}")
+        print(f"Media Type: {media_type}")
+        print(f"Media ID: {media_id}")
+        print(f"Text Content: {text_content}")
+        print("-" * 30)
+else:
+    print("No messages found in the database.")
 
 # Replace with your Telegram bot API token
 Your_bot_token_id = ''  # Replace with your bot's API token
@@ -69,7 +99,9 @@ def initialize_database2():
 
 initialize_database2()
 
-def save_message_to_db(username, user_id, media_type, media_id=None, text_content=None):
+def save_message_to_db(username, user_id, media_type,  timestamp, media_id=None, text_content=None):
+    logger.info(f"Saving message to DB: username={username}, user_id={user_id}, "
+                f"type={media_type}, timestamp={timestamp}, text={text_content}, media={media_id}")
     try:
         connection = sqlite3.connect("messages.db")
         cursor = connection.cursor()
@@ -241,6 +273,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     resize_keyboard=True,
                 )
             )
+            return
         elif user_message == "O'zbek tilida":
             # Send the document in Uzbek
             file_path = "C:\\Users\\ibroh\\OneDrive\\Desktop\\дебитор_порядок действий Uz.docx"  # Replace with Uzbek file path
@@ -253,6 +286,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     resize_keyboard=True,
                 )
             )
+            return
 
         # else:
         #     # Handle invalid input
@@ -285,7 +319,6 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if user_message == "1. Chat":
         push_to_history(user_id, "1. Chat")
         # Start authentication flow
-        user_states[user_id] = STATE_AUTH_TOLOV_Q1
         await update.message.reply_text(
             "Pastdagi tugmalardan birini tanlang",
             reply_markup=ReplyKeyboardMarkup(
@@ -327,6 +360,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif user_message == "Orqaga":
         await handle_orqaga(update, context)
         return
+
 
     elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q1:
         # Save answer to first question
@@ -395,9 +429,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz to'lov bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
             f"{filled_out_details}\n\n"
-            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
@@ -471,9 +505,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz konvertatsiya bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
             f"{filled_out_details}\n\n"
-            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
@@ -540,9 +574,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz faktoring bo'yicha mutahasis bilan bog'lanish uchun quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
             f"{filled_out_details}\n\n"
-            "Endi muammo yoki savolingizni yozingingiz mumkin:",
+            "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
@@ -625,7 +659,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         except Exception as e:
             logger.error(f"Error forwarding message to experts: {e}")
             await update.message.reply_text(
-                # "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
+                "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
                 reply_markup=main_menu_keyboard(),
             )
 
@@ -644,6 +678,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "Kechirasiz, so'rovingizni tushunmadim menyudan tanlang.", reply_markup=main_menu_keyboard()
         )
+
+
+
 
 async def handle_orqaga(update: Update, context: CallbackContext):
     user_id = update.message.chat_id
