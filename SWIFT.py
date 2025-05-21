@@ -47,7 +47,8 @@ else:
 Your_bot_token_id = ''  # Replace with your bot's API token
 
 # Replace with the group chat ID where experts will see customer queries
-EXPERT_GROUP_CHAT_ID = -4806778713  # Replace with your group chat ID
+# EXPERT_GROUP_CHAT_ID = -4806778713  # Replace with your group chat ID
+EXPERT_GROUP_CHAT_ID = -1002536857148  # Replace with your group chat ID
 
 # Configure logging
 logging.basicConfig(
@@ -157,17 +158,19 @@ STATE_AUTH_TOLOV_Q2 = "auth_q2"
 STATE_AUTH_TOLOV_Q3 = "auth_q3"
 STATE_AUTH_TOLOV_Q4 = "auth_q4"
 STATE_AUTH_TOLOV_Q5 = "auth_q5"
-STATE_AUTH_DONE = "auth_done"
+STATE_AUTH_TOLOV_DONE = "auth_tolov_done"
 STATE_AUTH_FACTOR_Q1 = "auth_f_q1"
 STATE_AUTH_FACTOR_Q2 = "auth_f_q2"
 STATE_AUTH_FACTOR_Q3 = "auth_f_q3"
 STATE_AUTH_FACTOR_Q4 = "auth_f_q4"
 STATE_AUTH_FACTOR_Q5 = "auth_f_q5"
+STATE_AUTH_FACTOR_DONE = "auth_factor_done"
 STATE_AUTH_KONVERT_Q1 = "auth_k_q1"
 STATE_AUTH_KONVERT_Q2 = "auth_k_q2"
 STATE_AUTH_KONVERT_Q3 = "auth_k_q3"
 STATE_AUTH_KONVERT_Q4 = "auth_k_q4"
 STATE_AUTH_KONVERT_Q5 = "auth_k_q5"
+STATE_AUTH_KONVERT_DONE = "auth_konvert_done"
 
 
 user_states = {}
@@ -422,19 +425,21 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_answers[user_id]["FIO"] = user_message
 
         # Change the state to indicate the process is done
-        user_states[user_id] = STATE_AUTH_DONE
+        user_states[user_id] = STATE_AUTH_TOLOV_DONE
 
         # Format the collected details for sending back to the user
         filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"Murojaat ID: {muroajaat_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
+
 
     elif user_states.get(user_id) == STATE_AUTH_KONVERT_Q1:
         # Save answer to first question
@@ -498,14 +503,15 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_answers[user_id]["FIO"] = user_message
 
         # Change the state to indicate the process is done
-        user_states[user_id] = STATE_AUTH_DONE
+        user_states[user_id] = STATE_AUTH_KONVERT_DONE
 
         # Format the collected details for sending back to the user
         filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"Murojaat ID: {muroajaat_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
@@ -567,14 +573,15 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_answers[user_id]["Murojaatning maqsadi"] = user_message
 
         # Change the state to indicate the process is done
-        user_states[user_id] = STATE_AUTH_DONE
+        user_states[user_id] = STATE_AUTH_FACTOR_DONE
 
         # Format the collected details for sending back to the user
         filled_out_details = "\n".join([f"{key}: {value}" for key, value in user_answers[user_id].items()])
 
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
-            "Tasdiqlash muvaffaqiyatli yakunlandi. Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
+            f"Murojaat ID: {muroajaat_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
@@ -584,7 +591,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     elif user_message == "2. Aloqaga chiqish":
         await update.message.reply_text(
-            "Operator bilan bog'lanish uchun +998123456789 raqamiga qo'ng'iroq qiling yoki onlayn chatga yozing.",
+            "1. Swift to'lovlari bo'yicha Operator bilan bog'lanish uchun +998123456789 raqamiga qo'ng'iroq qiling yoki onlayn chatga yozing.\n 2.Konvertatsiya bo'yicha Operator bilan bog'lanish uchun +998123456789 raqamiga qo'ng'iroq qiling yoki onlayn chatga yozing.\n3.Faktoring bo'yicha Operator bilan bog'lanish uchun +998123456789 raqamiga qo'ng'iroq qiling yoki onlayn chatga yozing.",
             reply_markup=ReplyKeyboardMarkup([
                 [KeyboardButton("Orqaga")],
                 #[KeyboardButton("Bosh sahifa")]
@@ -603,7 +610,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 
-    elif user_states.get(user_id) == STATE_AUTH_DONE:
+    elif user_states.get(user_id) == STATE_AUTH_TOLOV_DONE:
         try:
             username = update.message.from_user.username or "No Username"
             timestamp = update.message.date  # Timestamp of the message
@@ -611,7 +618,9 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             if update.message.text:
                 forwarded_message = await context.bot.send_message(
                     chat_id=EXPERT_GROUP_CHAT_ID,
-                    text=f"📢 Yangi muammo (User {user_id}, Murojaat ID: {muroajaat_id}): {update.message.text}",
+                    message_thread_id= 2,
+                    text=f"📢 Yangi muammo (User {user_id}, Murojaat ID: {muroajaat_id}): {update.message.text}, {filled_out_details}",
+
                 )
                 # Save to database and map
                 save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
@@ -621,6 +630,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 photo = update.message.photo[-1]
                 forwarded_message = await context.bot.send_photo(
                     chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 2,
                     photo=photo.file_id,
                     caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
                 )
@@ -631,6 +641,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 video = update.message.video
                 forwarded_message = await context.bot.send_video(
                     chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 2,
                     video=video.file_id,
                     caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
                 )
@@ -641,6 +652,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 document = update.message.document
                 forwarded_message = await context.bot.send_document(
                     chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 2,
                     document=document.file_id,
                     caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
                 )
@@ -664,6 +676,141 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
 
 
+
+    elif user_states.get(user_id) == STATE_AUTH_KONVERT_DONE:
+        try:
+            username = update.message.from_user.username or "No Username"
+            timestamp = update.message.date  # Timestamp of the message
+
+            if update.message.text:
+                forwarded_message = await context.bot.send_message(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 20,
+                    text=f"📢 Yangi muammo (User {user_id}, Murojaat ID: {muroajaat_id}): {update.message.text}",
+
+                )
+                # Save to database and map
+                save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.photo:
+                photo = update.message.photo[-1]
+                forwarded_message = await context.bot.send_photo(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 20,
+                    photo=photo.file_id,
+                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                )
+                save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.video:
+                video = update.message.video
+                forwarded_message = await context.bot.send_video(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 20,
+                    video=video.file_id,
+                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                )
+                save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.document:
+                document = update.message.document
+                forwarded_message = await context.bot.send_document(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 20,
+                    document=document.file_id,
+                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
+                )
+                save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            else:
+                await update.message.reply_text(
+                    "Kechirasiz, ushbu turdagi fayllar qabul qilinmaydi.",
+                    reply_markup=main_menu_keyboard(),
+                )
+            await update.message.reply_text(
+                "Xabar mutaxassislarga yuborildi. Tez orada javob olasiz.",
+                reply_markup=main_menu_keyboard(),
+            )
+        except Exception as e:
+            logger.error(f"Error forwarding message to experts: {e}")
+            await update.message.reply_text(
+                "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
+                reply_markup=main_menu_keyboard(),
+            )
+
+
+
+    elif user_states.get(user_id) == STATE_AUTH_FACTOR_DONE:
+        try:
+            username = update.message.from_user.username or "No Username"
+            timestamp = update.message.date  # Timestamp of the message
+
+            if update.message.text:
+                forwarded_message = await context.bot.send_message(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 22,
+                    text=f"📢 Yangi muammo: (User {user_id}\n Murojaat ID: {muroajaat_id})"
+                         f": {update.message.text}",
+                )
+                # Save to database and map
+                save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.photo:
+                photo = update.message.photo[-1]
+                forwarded_message = await context.bot.send_photo(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 22,
+                    photo=photo.file_id,
+                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                )
+                save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.video:
+                video = update.message.video
+                forwarded_message = await context.bot.send_video(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 22,
+                    video=video.file_id,
+                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                )
+                save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            elif update.message.document:
+                document = update.message.document
+                forwarded_message = await context.bot.send_document(
+                    chat_id=EXPERT_GROUP_CHAT_ID,
+                    message_thread_id= 22,
+                    document=document.file_id,
+                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
+                )
+                save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
+                expert_to_user[forwarded_message.message_id] = user_id
+
+            else:
+                await update.message.reply_text(
+                    "Kechirasiz, ushbu turdagi fayllar qabul qilinmaydi.",
+                    reply_markup=main_menu_keyboard(),
+                )
+            await update.message.reply_text(
+                "Xabar mutaxassislarga yuborildi. Tez orada javob olasiz.",
+                reply_markup=main_menu_keyboard(),
+            )
+        except Exception as e:
+            logger.error(f"Error forwarding message to experts: {e}")
+            await update.message.reply_text(
+                "Kechirasiz, xabarni yuborishda xatolik yuz berdi.",
+                reply_markup=main_menu_keyboard(),
+            )
+
+
+
             #user_states[user_id] = STATE_NONE
 
     elif user_states.get(user_id) == STATE_FEEDBACK:
@@ -678,7 +825,6 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "Kechirasiz, so'rovingizni tushunmadim menyudan tanlang.", reply_markup=main_menu_keyboard()
         )
-
 
 
 
@@ -831,8 +977,8 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("getid", get_group_id))  # Add the handler here
     # application.add_handler(MessageHandler(filters.TEXT &  filters.ChatType.PRIVATE, handle_user_message))
+    application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.SUPERGROUP, handle_expert_reply))
     application.add_handler(MessageHandler(filters.ALL   &  filters.ChatType.PRIVATE, handle_user_message))
-    application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUP, handle_expert_reply))
 
 
 
