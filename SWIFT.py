@@ -13,6 +13,47 @@ from telegram.ext import (
 
 import sqlite3
 
+
+DATABASE_PATH = "UserDetails.db"
+def get_next_murojaat_id():
+    # Connect to the SQLite database
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
+    try:
+        # Get the last murojaat_id
+        cursor.execute("SELECT MAX(Murojaat_id) AS last_id FROM tolov_chat_form;")
+        result = cursor.fetchone()
+        last_id = result[0] if result and result[0] else 0
+        return last_id + 1
+    finally:
+        cursor.close()
+        connection.close()
+
+def create_factor_chat_form_table():
+    connection = sqlite3.connect("UserDetails.db")
+    cursor = connection.cursor()
+
+    # Create the table with the required columns
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS factor_chat_form (
+                                                                   user_id INTEGER NOT NULL,
+                                                                   korxona_nomi_STIR TEXT NOT NULL,
+                                                                   Filial TEXT NOT NULL,
+                                                                   telefon_raqami TEXT NOT NULL,
+                                                                   rahbar_fio TEXT NOT NULL,
+                                                                   murojaat_id INTEGER PRIMARY KEY,
+                                                                   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                   )
+                   """)
+
+    connection.commit()
+    connection.close()
+
+# Execute the function to create the table
+create_factor_chat_form_table()
+
+
+
 def get_all_messages():
     try:
         connection = sqlite3.connect("messages.db")
@@ -101,33 +142,78 @@ def initialize_database2():
 
 initialize_database2()
 
+# def print_table_columns():
+#     connection = sqlite3.connect("UserDetails.db")
+#     cursor = connection.cursor()
+#     cursor.execute("PRAGMA table_info(tolov_chat_form);")
+#     columns = cursor.fetchall()
+#     for col in columns:
+#         print(col)
+#     connection.close()
+#
+# print_table_columns()
+
+
 
 def save_tolov_chat_form():
-    connection = sqlite3.connect("User_details.db")  # Creates the database file if it doesn't exist
+    connection = sqlite3.connect("UserDetails.db")  # Creates the database file if it doesn't exist
     cursor = connection.cursor()
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tolov_chat_form (
-    Korxona_nomi TEXT,
-    Manzil varchar(100),
-    MFO varchar(50),
-    Telefon_raqami int(15),
-    FIO varchar(100))""")
+                   CREATE TABLE IF NOT EXISTS tolov_chat_form (
+                                                                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                                  User_id INTEGER NOT NULL,
+                                                                  Murojaat_id INTEGER NOT NULL,
+                                                                  Korxona_nomi varchar(100),
+                                                                  Manzil VARCHAR(100),
+                       MFO VARCHAR(50),
+                       Telefon_raqami VARCHAR(20),
+                       FIO VARCHAR(100),
+                       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                       )
+                   """)
     connection.commit()
     connection.close()
+
 
 save_tolov_chat_form()
 
 
+def insert_factor_chat_form(user_id, korxona_nomi_STIR, filial, telefon_raqami, rahbar_fio, murojaat_id, timestamp):
+    """
+    Inserts a new record into the factor_chat_form table.
 
-def insert_tolov_chat_form(korxona_nomi, manzil, mfo, telefon_raqami, fio):
-    connection = sqlite3.connect("User_details.db")
+    Args:
+        user_id (int): The user ID.
+        korxona_nomi_STIR (str): The organization name or STIR.
+        filial (str): The branch or MFO.
+        telefon_raqami (str): The phone number.
+        rahbar_fio (str): The full name of the leader.
+        murojaat_id (int): The unique ID for the request.
+        timestamp (datetime): The timestamp for the record.
+    """
+    connection = sqlite3.connect("UserDetails.db")
     cursor = connection.cursor()
 
     # Insert data into the table
     cursor.execute("""
-                   INSERT INTO tolov_chat_form (Korxona_nomi, Manzil, MFO, Telefon_raqami, FIO)
-                   VALUES (?, ?, ?, ?, ?)
-                   """, (korxona_nomi, manzil, mfo, telefon_raqami, fio))
+                   INSERT INTO factor_chat_form (user_id, korxona_nomi_STIR, filial, telefon_raqami, rahbar_FIO, murojaat_id, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                   """, (user_id, korxona_nomi_STIR, filial, telefon_raqami, rahbar_fio, murojaat_id, timestamp))
+
+    connection.commit()
+    connection.close()
+
+
+
+def insert_tolov_chat_form(user_id, korxona_nomi, manzil, mfo, telefon_raqami, fio, murojaat_id, timestamp):
+    connection = sqlite3.connect("UserDetails.db")
+    cursor = connection.cursor()
+
+    # Insert data into the table
+    cursor.execute("""
+                   INSERT INTO tolov_chat_form (User_id, Korxona_nomi, Manzil, MFO, Telefon_raqami, FIO, Murojaat_id, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                   """, (user_id, korxona_nomi, manzil, mfo, telefon_raqami, fio, murojaat_id, timestamp))
 
     connection.commit()
     connection.close()
@@ -135,7 +221,7 @@ def insert_tolov_chat_form(korxona_nomi, manzil, mfo, telefon_raqami, fio):
 
 def get_all_tolov_form():
     try:
-        connection = sqlite3.connect("User_details.db")
+        connection = sqlite3.connect("UserDetails.db")
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM tolov_chat_form")
         messages = cursor.fetchall()
@@ -148,18 +234,22 @@ def get_all_tolov_form():
 
 tolov_form = get_all_tolov_form()
 
-if tolov_form:
-    print("All Messages:")
-    for details in tolov_form:
-        Korxona_nomi, Manzil, MFO, Telefon_raqami, FIO = details
-        print(f"Korxona nomi: {Korxona_nomi}")
-        print(f"Manzil: {Manzil}")
-        print(f"Bank MFO: {MFO}")
-        print(f"Telefon raqami: {Telefon_raqami}")
-        print(f"FIO: {FIO}")
-        print("-" * 30)
-else:
-    print("No messages found in the database.")
+#
+# if tolov_form:
+#     print("All user entered messages for To'lov Messages:")
+#     for details in tolov_form:
+#         user_id, Korxona_nomi, Manzil, MFO, Telefon_raqami, FIO, Murojaat_id, timestamp = details
+#         print(f"User id: {user_id}")
+#         print(f"Korxona nomi: {Korxona_nomi}")
+#         print(f"Manzil: {Manzil}")
+#         print(f"Bank MFO: {MFO}")
+#         print(f"Telefon raqami: {Telefon_raqami}")
+#         print(f"FIO: {FIO}")
+#         print(f"Murojaat ID: {Murojaat_id}")
+#         print(f"Timestamp: {timestamp}")
+#         print("-" * 30)
+# else:
+#     print("No messages found in the database.")
 
 
 # Example usage:
@@ -493,18 +583,26 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
 
+
+
     elif user_states.get(user_id) == STATE_AUTH_TOLOV_Q5:
-        # Store the last user message in their details
+    # Store the last user message in their details
         user_answers[user_id]["FIO"] = user_message
 
-        # Insert the collected details into the database
+        # Generate a unique murojaat_id
         try:
+            murojaat_id = get_next_murojaat_id()
+
+            # Insert the collected details into the database with the new murojaat_id
             insert_tolov_chat_form(
+                user_id=user_id,
                 korxona_nomi=user_answers[user_id]["Korxona nomi"],
                 manzil=user_answers[user_id]["Manzil"],
                 mfo=user_answers[user_id]["MFO"],
                 telefon_raqami=user_answers[user_id]["Telefon raqam"],
-                fio=user_answers[user_id]["FIO"]
+                fio=user_answers[user_id]["FIO"],
+                murojaat_id=murojaat_id,
+                timestamp=datetime.now()
             )
         except Exception as e:
             # Handle any database errors
@@ -523,12 +621,15 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
             "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
-            f"Murojaat ID: {muroajaat_id}\n"
+            f"Murojaat ID: {murojaat_id}\n"  # Use the generated ID here
+            f"User id: {user_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
+
+
 
 
 
@@ -593,6 +694,30 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Store the last user message in their details
         user_answers[user_id]["FIO"] = user_message
 
+
+        # Generate a unique murojaat_id
+        try:
+            murojaat_id = get_next_murojaat_id()
+
+            # Insert the collected details into the database with the new murojaat_id
+            insert_tolov_chat_form(
+                user_id=user_id,
+                korxona_nomi=user_answers[user_id]["Korxona nomi"],
+                manzil=user_answers[user_id]["Manzil"],
+                mfo=user_answers[user_id]["MFO"],
+                telefon_raqami=user_answers[user_id]["Telefon raqam"],
+                fio=user_answers[user_id]["FIO"],
+                murojaat_id=murojaat_id,
+                timestamp=datetime.now()
+            )
+        except Exception as e:
+            # Handle any database errors
+            await update.message.reply_text(
+                "Ma'lumotlarni saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring."
+            )
+            print(f"Database error: {e}")
+            return
+
         # Change the state to indicate the process is done
         user_states[user_id] = STATE_AUTH_KONVERT_DONE
 
@@ -602,7 +727,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
             "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
-            f"Murojaat ID: {muroajaat_id}\n"
+            f"Murojaat ID: {murojaat_id}\n"  # Use the generated ID here
+            f"User id: {user_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
@@ -652,16 +778,26 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_answers[user_id]["Filial"] = user_message
         user_states[user_id] = STATE_AUTH_FACTOR_Q5
         # You can validate answers here if you want
-        await update.message.reply_text(
-            "Murojaat maqsadi",
-            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
-        )
-        return
+        try:
+            murojaat_id = get_next_murojaat_id()
 
-
-    elif user_states.get(user_id) == STATE_AUTH_FACTOR_Q5:
-        # Store the last user message in their details
-        user_answers[user_id]["Murojaatning maqsadi"] = user_message
+            # Insert the collected details into the database with the new murojaat_id
+            insert_factor_chat_form(
+                user_id=user_id,
+                korxona_nomi_STIR=user_answers[user_id]["Korxona nomi va STIR raqami"],
+                filial = user_answers[user_id]["Filial"],
+                telefon_raqami=user_answers[user_id]["Telefon raqam"],
+                rahbar_fio=user_answers[user_id]["FIO"],
+                murojaat_id=murojaat_id,
+                timestamp=datetime.now()
+            )
+        except Exception as e:
+            # Handle any database errors
+            await update.message.reply_text(
+                "Ma'lumotlarni saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring."
+            )
+            print(f"Database error: {e}")
+            return
 
         # Change the state to indicate the process is done
         user_states[user_id] = STATE_AUTH_FACTOR_DONE
@@ -672,12 +808,16 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Send a confirmation message along with the filled-out details
         await update.message.reply_text(
             "Siz quyidagi ma'lumotlarni kiritdingiz:\n\n"
-            f"Murojaat ID: {muroajaat_id}\n"
+            f"Murojaat ID: {murojaat_id}\n"  # Use the generated ID here
+            f"User id: {user_id}\n"
             f"{filled_out_details}\n\n"
             "Endi murojaat qilishingiz mumkin:",
             reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Orqaga")]], resize_keyboard=True)
         )
         return
+
+
+
 
     elif user_message == "2. Aloqaga chiqish":
         await update.message.reply_text(
@@ -704,27 +844,62 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         try:
             username = update.message.from_user.username or "No Username"
             timestamp = update.message.date  # Timestamp of the message
+            conn = sqlite3.connect('UserDetails.db')
+            cursor = conn.cursor()
+
+            # Include user_id in the SELECT query
+            cursor.execute('''
+                           SELECT User_id, Korxona_nomi, MFO, Manzil, Telefon_raqami, Murojaat_id, FIO
+                           FROM tolov_chat_form
+                           WHERE User_id = ?
+                           order by timestamp desc limit 1''', (user_id,))
+
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                user_id, Korxona_nomi, MFO, Manzil, Telefon_raqami, Murojaat_id, FIO = result  # Ensure correct unpacking
+
+            # conn2 = sqlite3.connect('messages.db')  # Connection to the second database
+            # cursor2 = conn2.cursor()
+            #
+            # # Adjust the query based on the structure of the second database
+            # cursor2.execute('''
+            #             SELECT muroajaat_id
+            #             FROM messages
+            #             where user_id = ?
+            #             ORDER BY timestamp DESC LIMIT 1
+            #             ''', (user_id,))
+            # muroajaat_result = cursor2.fetchone()
+            # conn2.close()
+            #
+            # if muroajaat_result:
+            #     muroajaat_id = muroajaat_result[0]
+            # else:
+            #     muroajaat_id = "No ID Found"
+
             if update.message.text:
                 forwarded_message = await context.bot.send_message(
                     chat_id=EXPERT_GROUP_CHAT_ID,
-                    message_thread_id= 2,
-                    text=f"📢 Yangi muammo: {update.message.text}\n (User: {user_id},\n Murojaat ID: {muroajaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{MFO},\n Telefon raqami: {Telefon_raqami}\n FIO: {FIO})"
+                    message_thread_id=2,
+                    text=f"📢 Yangi muammo: {update.message.text}\n (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO})"
                 )
-
-                # Save to database and map
                 save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
                 expert_to_user[forwarded_message.message_id] = user_id
 
+
+
+
             elif update.message.photo:
-                photo = update.message.photo[-1]
-                forwarded_message = await context.bot.send_photo(
-                    chat_id=EXPERT_GROUP_CHAT_ID,
-                    message_thread_id= 2,
-                    photo=photo.file_id,
-                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}, Korxona nomi: {Korxona_nomi}):",
-                )
-                save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
-                expert_to_user[forwarded_message.message_id] = user_id
+                    photo = update.message.photo[-1]
+                    forwarded_message = await context.bot.send_photo(
+                        chat_id=EXPERT_GROUP_CHAT_ID,
+                        message_thread_id= 2,
+                        photo=photo.file_id,
+                        caption=f"📢 Yangi surat (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
+                    )
+                    save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
+                    expert_to_user[forwarded_message.message_id] = user_id
 
             elif update.message.video:
                 video = update.message.video
@@ -732,7 +907,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 2,
                     video=video.file_id,
-                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                    caption=f"📢 Yangi video (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
                 )
                 save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -743,7 +918,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 2,
                     document=document.file_id,
-                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
+                    caption=f"📢 Yangi hujjat (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
                 )
                 save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -757,6 +932,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 "Xabar mutaxassislarga yuborildi. Tez orada javob olasiz.",
                 reply_markup=main_menu_keyboard(),
             )
+
+
         except Exception as e:
             logger.error(f"Error forwarding message to experts: {e}")
             await update.message.reply_text(
@@ -765,17 +942,33 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
 
 
-
     elif user_states.get(user_id) == STATE_AUTH_KONVERT_DONE:
+
         try:
             username = update.message.from_user.username or "No Username"
             timestamp = update.message.date  # Timestamp of the message
+            conn = sqlite3.connect('UserDetails.db')
+            cursor = conn.cursor()
+
+            # Include user_id in the SELECT query
+            cursor.execute('''
+                           SELECT User_id, Korxona_nomi, MFO, Manzil, Telefon_raqami, Murojaat_id, FIO
+                           FROM tolov_chat_form
+                           WHERE User_id = ?
+                           order by timestamp desc limit 1''', (user_id,))
+
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                user_id, Korxona_nomi, MFO, Manzil, Telefon_raqami, Murojaat_id, FIO = result
+
 
             if update.message.text:
                 forwarded_message = await context.bot.send_message(
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 20,
-                    text=f"📢 Yangi muammo (User {user_id}, Murojaat ID: {muroajaat_id}): {update.message.text}",
+                    text=f"📢 Yangi muammo: {update.message.text}\n (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO})",
 
                 )
                 # Save to database and map
@@ -788,7 +981,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 20,
                     photo=photo.file_id,
-                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                    caption=f"📢 Yangi surat (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
                 )
                 save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -799,7 +992,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 20,
                     video=video.file_id,
-                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                    caption=f"📢 Yangi video (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
                 )
                 save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -810,7 +1003,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 20,
                     document=document.file_id,
-                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
+                    caption=f"📢 Yangi hujjat (User: {user_id},\n Murojaat ID: {Murojaat_id},\n Korxona nomi: {Korxona_nomi},\n Manzil:{Manzil},\n Bank MFO: {MFO},\n Telefon raqami: {Telefon_raqami},\n FIO: {FIO}):",
                 )
                 save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -834,16 +1027,31 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
     elif user_states.get(user_id) == STATE_AUTH_FACTOR_DONE:
+
         try:
             username = update.message.from_user.username or "No Username"
             timestamp = update.message.date  # Timestamp of the message
+            conn = sqlite3.connect('UserDetails.db')
+            cursor = conn.cursor()
 
+            # Include user_id in the SELECT query
+            cursor.execute('''
+                           SELECT user_id, korxona_nomi_STIR, filial, telefon_raqami, murojaat_id, rahbar_fio
+                           FROM factor_chat_form
+                           WHERE user_id = ?
+                           order by timestamp desc limit 1''', (user_id,))
+
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                user_id, korxona_nomi_STIR, filial, telefon_raqami, murojaat_id, rahbar_fio = result
             if update.message.text:
                 forwarded_message = await context.bot.send_message(
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 22,
-                    text=f"📢 Yangi muammo: (User {user_id}\n Murojaat ID: {muroajaat_id})"
-                         f": {update.message.text}",
+                    text=f"📢 Yangi muammo: {update.message.text}\n(User {user_id},\n Murojaat ID: {muroajaat_id},\n Korxona nomi va STIR: {korxona_nomi_STIR},\n filial: {filial},\n Telefon raqami: {telefon_raqami},\n Rahbar_fio: {rahbar_fio})"
+                         # f": {update.message.text}",
                 )
                 # Save to database and map
                 save_message_to_db(username, user_id, "text", timestamp, text_content=update.message.text)
@@ -855,7 +1063,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 22,
                     photo=photo.file_id,
-                    caption=f"📢 Yangi surat (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                    caption=f"📢 Yangi surat (User {user_id},\n Murojaat ID: {muroajaat_id},\n Korxona nomi va STIR: {korxona_nomi_STIR},\n filial: {filial},\n Telefon raqami: {telefon_raqami},\n Rahbar_fio: {rahbar_fio})",
                 )
                 save_message_to_db(username, user_id, "photo", timestamp, media_id=photo.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -866,7 +1074,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 22,
                     video=video.file_id,
-                    caption=f"📢 Yangi video (User {user_id}, Murojaat  ID {muroajaat_id}):",
+                    caption=f"📢 Yangi video (User {user_id},\n Murojaat ID: {muroajaat_id},\n Korxona nomi va STIR: {korxona_nomi_STIR},\n filial: {filial},\n Telefon raqami: {telefon_raqami},\n Rahbar_fio: {rahbar_fio})",
                 )
                 save_message_to_db(username, user_id, "video", timestamp, media_id=video.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
@@ -877,7 +1085,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     chat_id=EXPERT_GROUP_CHAT_ID,
                     message_thread_id= 22,
                     document=document.file_id,
-                    caption=f"📢 Yangi hujjat (User {user_id}, Murojaat  ID {muroajaat_id})):",
+                    caption=f"📢 Yangi hujjat (User {user_id},\n Murojaat ID: {muroajaat_id},\n Korxona nomi va STIR: {korxona_nomi_STIR},\n filial: {filial},\n Telefon raqami: {telefon_raqami},\n Rahbar_fio: {rahbar_fio})",
                 )
                 save_message_to_db(username, user_id, "document", timestamp, media_id=document.file_id)
                 expert_to_user[forwarded_message.message_id] = user_id
